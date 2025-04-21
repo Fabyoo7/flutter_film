@@ -1,174 +1,119 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
+import 'package:flutter_applicationx/app/modules/dashboard/views/detail_view.dart';
+import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../controllers/film_controller.dart';
 
-class FilmView extends StatefulWidget {
+
+class FilmView extends StatelessWidget {
   const FilmView({super.key});
 
   @override
-  State<FilmView> createState() => _FilmViewState();
-}
-
-class _FilmViewState extends State<FilmView> {
-  List<dynamic> movies = [];
-  bool isLoading = true;
-
-  final String apiKey = 'baaa37583292e10f8694ea5ad6323027';
-
-  final Map<int, String> genreMap = {
-    28: "Action",
-    12: "Adventure",
-    16: "Animation",
-    35: "Comedy",
-    80: "Crime",
-    99: "Documentary",
-    18: "Drama",
-    10751: "Family",
-    14: "Fantasy",
-    36: "History",
-    27: "Horror",
-    10402: "Music",
-    9648: "Mystery",
-    10749: "Romance",
-    878: "Sci-Fi",
-    10770: "TV Movie",
-    53: "Thriller",
-    10752: "War",
-    37: "Western",
-  };
-
-  @override
-  void initState() {
-    super.initState();
-    fetchMovies();
-  }
-
-  Future<void> fetchMovies() async {
-    try {
-      final response = await http.get(Uri.parse(
-          'https://api.themoviedb.org/3/movie/popular?api_key=$apiKey&language=en-US&page=1'));
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        setState(() {
-          movies = (data['results'] as List)
-              .whereType<Map<String, dynamic>>()
-              .toList();
-          isLoading = false;
-        });
-      } else {
-        throw Exception('Failed to load movies');
-      }
-    } catch (e) {
-      setState(() => isLoading = false);
-      showDialog(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: const Text('Error'),
-          content: Text('Gagal memuat data: $e'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('OK'),
-            )
-          ],
-        ),
-      );
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
+    final controller = Get.put(FilmController());
+
     return Scaffold(
       backgroundColor: const Color(0xFF1C1B1F),
       appBar: AppBar(
         backgroundColor: const Color(0xFF1C1B1F),
         elevation: 0,
         title: Text(
-          "Daftar Film Populer",
+          "Daftar Film",
           style: GoogleFonts.poppins(
             color: Colors.white,
             fontWeight: FontWeight.bold,
           ),
         ),
         centerTitle: true,
+        actions: [
+          Obx(() => IconButton(
+                icon: const Icon(Icons.refresh, color: Colors.orangeAccent),
+                onPressed: controller.isLoading.value
+                    ? null
+                    : () => controller.refreshData(),
+              )),
+        ],
       ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator(color: Colors.orange))
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Text(
-                    "Film Terbaru",
-                    style: GoogleFonts.poppins(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.orangeAccent,
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: GridView.builder(
-                      itemCount: movies.length,
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 3,
-                        mainAxisSpacing: 12,
-                        crossAxisSpacing: 12,
-                        childAspectRatio: 0.5,
-                      ),
-                      itemBuilder: (context, index) {
-                        return MovieCard(
-                          movie: movies[index],
-                          genreMap: genreMap,
-                        );
-                      },
-                    ),
-                  ),
-                ),
-              ],
+      body: Obx(() {
+        if (controller.isLoading.value) {
+          return const Center(
+            child: CircularProgressIndicator(color: Colors.orange),
+          );
+        }
+
+        if (controller.filmList.isEmpty) {
+          return const Center(
+            child: Text(
+              "Tidak ada data film.",
+              style: TextStyle(color: Colors.white),
             ),
+          );
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                "Film Terbaru",
+                style: GoogleFonts.poppins(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.orangeAccent,
+                ),
+              ),
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: RefreshIndicator(
+                  onRefresh: controller.refreshData,
+                  color: Colors.orangeAccent,
+                  backgroundColor: Colors.white,
+                  child: GridView.builder(
+                    itemCount: controller.filmList.length,
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3,
+                      mainAxisSpacing: 12,
+                      crossAxisSpacing: 12,
+                      childAspectRatio: 0.5,
+                    ),
+                    itemBuilder: (context, index) {
+                      final film = controller.filmList[index];
+                      return GestureDetector(
+                        onTap: () async {
+                          final detail =
+                              await controller.getFilmById(film.id ?? 0);
+                          if (detail != null) {
+                            Get.to(() => DetailFilmView(film: detail));
+                          }
+                        },
+                        child: FilmCard(film: film),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      }),
     );
   }
 }
 
-class MovieCard extends StatelessWidget {
-  final Map<String, dynamic> movie;
-  final Map<int, String> genreMap;
+class FilmCard extends StatelessWidget {
+  final dynamic film;
 
-  const MovieCard({
-    super.key,
-    required this.movie,
-    required this.genreMap,
-  });
+  const FilmCard({super.key, required this.film});
 
   @override
   Widget build(BuildContext context) {
-    final posterPath = movie['poster_path'] as String?;
-    final posterUrl = posterPath != null
-        ? 'https://image.tmdb.org/t/p/w500$posterPath'
+    final posterUrl = (film.poster != null && film.poster!.isNotEmpty)
+        ? 'http://127.0.0.1:8000/images/film/${film.poster}'
         : null;
-
-    final genreIds =
-        (movie['genre_ids'] as List?)?.whereType<int>().toList() ?? [];
-    final genreNames = genreIds
-        .map((id) => genreMap[id] ?? '')
-        .where((name) => name.isNotEmpty)
-        .toList();
-    final genreDisplay = genreNames.isNotEmpty ? genreNames.join(', ') : '-';
-
-    final releaseDate = movie['release_date'] as String?;
-    final releaseYear = (releaseDate != null && releaseDate.isNotEmpty)
-        ? releaseDate.substring(0, 4)
-        : '-';
-
-    final title = movie['title'] ?? '-';
-    final voteAverage = movie['vote_average']?.toDouble() ?? 0.0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -196,7 +141,7 @@ class MovieCard extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         Text(
-          title,
+          film.judul ?? '-',
           style: GoogleFonts.poppins(
             color: Colors.white,
             fontWeight: FontWeight.bold,
@@ -206,7 +151,7 @@ class MovieCard extends StatelessWidget {
           maxLines: 1,
         ),
         Text(
-          "Genre: $genreDisplay",
+          "Genre: ${film.genre?.namaGenre ?? '-'}",
           style: GoogleFonts.poppins(
             color: Colors.orangeAccent,
             fontSize: 10,
@@ -215,16 +160,9 @@ class MovieCard extends StatelessWidget {
           maxLines: 1,
         ),
         Text(
-          "Tahun: $releaseYear",
+          "Tahun: ${film.tahunRilis ?? '-'}",
           style: GoogleFonts.poppins(
             color: Colors.blueAccent,
-            fontSize: 10,
-          ),
-        ),
-        Text(
-          "Rating: ${voteAverage.toStringAsFixed(1)}",
-          style: GoogleFonts.poppins(
-            color: Colors.greenAccent,
             fontSize: 10,
           ),
         ),

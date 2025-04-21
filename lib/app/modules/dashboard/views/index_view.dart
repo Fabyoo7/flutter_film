@@ -80,7 +80,19 @@ class IndexView extends StatelessWidget {
               }),
               const SizedBox(height: 24),
               sectionTitle("Film"),
-              sectionBox("Daftar Film di sini", height: 200),
+              Obx(() {
+                if (controller.isLoading.value) {
+                  return sectionBox("Loading film...", height: 200);
+                } else if (controller.filmList.isEmpty) {
+                  return sectionBox("Tidak ada film.", height: 200);
+                } else {
+                  return sectionList(
+                    controller.filmList
+                        .map((item) => item.judul ?? '-')
+                        .toList(),
+                  );
+                }
+              }),
             ],
           ),
         ),
