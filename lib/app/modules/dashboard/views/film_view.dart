@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_applicationx/app/modules/dashboard/views/detail_view.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import '../controllers/film_controller.dart';
-
 
 class FilmView extends StatelessWidget {
   const FilmView({super.key});
@@ -11,6 +12,22 @@ class FilmView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = Get.put(FilmController());
+
+    // Pastikan locale tanggal sudah tersedia
+    initializeDateFormatting('id_ID', null);
+
+    String formatTanggal(String? tanggal) {
+      if (tanggal == null || tanggal.isEmpty) return '-';
+      try {
+        if (RegExp(r'^\d{4}$').hasMatch(tanggal)) {
+          return tanggal;
+        }
+        DateTime date = DateTime.parse(tanggal);
+        return DateFormat('d MMMM yyyy', 'id_ID').format(date);
+      } catch (e) {
+        return '-';
+      }
+    }
 
     return Scaffold(
       backgroundColor: const Color(0xFF1C1B1F),
@@ -90,7 +107,8 @@ class FilmView extends StatelessWidget {
                             Get.to(() => DetailFilmView(film: detail));
                           }
                         },
-                        child: FilmCard(film: film),
+                        child:
+                            FilmCard(film: film, formatTanggal: formatTanggal),
                       );
                     },
                   ),
@@ -106,8 +124,9 @@ class FilmView extends StatelessWidget {
 
 class FilmCard extends StatelessWidget {
   final dynamic film;
+  final String Function(String?) formatTanggal;
 
-  const FilmCard({super.key, required this.film});
+  const FilmCard({super.key, required this.film, required this.formatTanggal});
 
   @override
   Widget build(BuildContext context) {
@@ -160,7 +179,7 @@ class FilmCard extends StatelessWidget {
           maxLines: 1,
         ),
         Text(
-          "Tahun: ${film.tahunRilis ?? '-'}",
+          "Tahun: ${formatTanggal(film.tahunRilis)}",
           style: GoogleFonts.poppins(
             color: Colors.blueAccent,
             fontSize: 10,

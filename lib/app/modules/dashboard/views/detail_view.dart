@@ -1,13 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 class DetailFilmView extends StatelessWidget {
   final dynamic film;
 
   const DetailFilmView({super.key, required this.film});
 
+  String formatTanggal(String? tanggal) {
+    if (tanggal == null || tanggal.isEmpty) return '-';
+    try {
+      DateTime date = DateTime.parse(tanggal);
+      return DateFormat('d MMMM yyyy', 'id_ID').format(date);
+    } catch (e) {
+      return '-';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    initializeDateFormatting('id_ID', null); // pastikan ini dipanggil
+
     final posterUrl = (film.poster != null && film.poster!.isNotEmpty)
         ? 'http://127.0.0.1:8000/images/film/${film.poster}'
         : null;
@@ -37,7 +51,6 @@ class DetailFilmView extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Poster
             ClipRRect(
               borderRadius: BorderRadius.circular(16),
               child: posterUrl != null
@@ -61,8 +74,6 @@ class DetailFilmView extends StatelessWidget {
                     ),
             ),
             const SizedBox(height: 20),
-
-            // Judul
             Text(
               film.judul ?? '-',
               style: GoogleFonts.poppins(
@@ -71,34 +82,29 @@ class DetailFilmView extends StatelessWidget {
                 color: Colors.orangeAccent,
               ),
             ),
-
             const SizedBox(height: 10),
-
-            // Info genre dan tahun
             Row(
               children: [
-                Icon(Icons.category, color: Colors.white54, size: 16),
+                const Icon(Icons.category, color: Colors.white54, size: 16),
                 const SizedBox(width: 6),
                 Text(
                   film.genre?.namaGenre ?? '-',
                   style: GoogleFonts.poppins(color: Colors.white70),
                 ),
                 const SizedBox(width: 16),
-                Icon(Icons.calendar_today, color: Colors.white54, size: 16),
+                const Icon(Icons.calendar_today,
+                    color: Colors.white54, size: 16),
                 const SizedBox(width: 6),
                 Text(
-                  film.tahunRilis ?? '-',
+                  formatTanggal(film.tahunRilis),
                   style: GoogleFonts.poppins(color: Colors.white70),
                 ),
               ],
             ),
-
             const SizedBox(height: 20),
-
-            // Info Aktor
             Row(
               children: [
-                Icon(Icons.person, color: Colors.white54, size: 16),
+                const Icon(Icons.person, color: Colors.white54, size: 16),
                 const SizedBox(width: 6),
                 Text(
                   film.aktor ?? '-',
@@ -106,10 +112,7 @@ class DetailFilmView extends StatelessWidget {
                 ),
               ],
             ),
-
             const SizedBox(height: 20),
-
-            // Sinopsis / Deskripsi
             Text(
               "Deskripsi",
               style: GoogleFonts.poppins(
